@@ -6,13 +6,14 @@ import axios from "axios";
 export const registerUser = createAsyncThunk(
   "auth/signup",
   async (userData, { rejectWithValue }) => {
+    console.log("Sending registration data:", userData);
     try {
       const response = await axios.post(`/api/auth/sign-up`, {
-        name: userData.username,
+        username: userData.username,
         email: userData.email,
-        password: userData.password
-       /* age: userData.age,        
-        avatar: userData.avatar */
+        password: userData.password,
+        age: parseInt(userData.age),        
+        avatarId: userData.avatar 
       });
       return response.data;
     } catch (error) {
@@ -31,7 +32,22 @@ export const loginUser = createAsyncThunk(
       const response = await axios.post(`/api/auth/sign-in`, userData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Login error");
+      if (error.response) {
+        // Server returned an error response
+        if (error.response.status === 404) {
+          return rejectWithValue("user_not_found");
+        } else if (error.response.status === 401) {
+          return rejectWithValue("invalid_credentials");
+        } else {
+          return rejectWithValue(error.response.data?.message || "server_error");
+        }
+      } else if (error.request) {
+        // Request made but no response received
+        return rejectWithValue("server_unreachable");
+      } else {
+        // Something else happened while setting up the request
+        return rejectWithValue("network_error");
+      }
     }
   }
 );
